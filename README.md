@@ -76,3 +76,8 @@ just bump 0.2.0-beta.1
 # or, for a stable release:
 just bump 0.2.0
 ```
+
+## License
+
+fse-tool is licensed under the GNU General Public License v3.0 (GPL-3.0-only). See [LICENSE](LICENSE).
+
