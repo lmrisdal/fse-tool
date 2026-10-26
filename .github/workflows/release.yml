@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build
+        shell: powershell
+        run: Add-Type -Path ./fse-tool.cs -OutputAssembly ./fse-tool.exe -OutputType ConsoleApplication
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $options = @('--verify-tag', '--generate-notes')
+          if ($env:TAG.Contains('-')) { $options += @('--prerelease', '--latest=false') }
+          gh release create $env:TAG fse-tool.exe @options
+          if ($LASTEXITCODE -ne 0) { throw 'Release failed.' }
