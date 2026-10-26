@@ -8,6 +8,8 @@ It also provides a bypass for the "Restart for better performance" confirmation 
 
 Enable Xbox mode in Windows Settings > Gaming > XBOX mode, and select a supported home app such as **XBOX** under **Choose home app**.
 
+Use tools like [XboxFullScreenExperienceTool](https://github.com/8bit2qubit/XboxFullscreenExperienceTool) to enable Xbox fullscreen experience on your system.
+
 ## Installation
 
 Download the latest release from the repository and place `fse-tool.exe` in a folder of your choice. Optionally, add the folder to your system PATH to run `fse-tool` from any location.
