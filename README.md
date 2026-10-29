@@ -18,7 +18,7 @@ Download the latest release from the repository and place `fse-tool.exe` in a fo
 
 ```text
 fse-tool start
-fse-tool exit
+fse-tool stop
 fse-tool toggle
 fse-tool status
 
@@ -27,7 +27,7 @@ fse-tool uninstall
 ```
 
 - `start` enters Xbox mode; it does nothing if already active.
-- `exit` returns to the desktop; it does nothing if already on the desktop.
+- `stop` returns to the desktop; it does nothing if already on the desktop.
 - `toggle` switches between Xbox mode and the desktop.
 - `status` prints exactly `Desktop` or `Xbox`.
 - `install` enables the entry confirmation bypass for the current user.
@@ -80,4 +80,3 @@ just bump 0.2.0
 ## License
 
 fse-tool is licensed under the GNU General Public License v3.0 (GPL-3.0-only). See [LICENSE](LICENSE).
-

@@ -84,7 +84,7 @@ namespace XboxFseDirect {
     public static class Program {
         const string RegistryPath = @"Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults";
         const string RegistryValue = "EnterGamingPostureConfirmation_Config";
-        const string Usage = "Usage: fse-tool start | exit | status | toggle | install | uninstall";
+        const string Usage = "Usage: fse-tool start | stop | status | toggle | install | uninstall";
 
         static bool IsDialogBypassEnabled(Microsoft.Win32.RegistryKey key) {
             object value = key == null ? null : key.GetValue(RegistryValue);
@@ -129,7 +129,7 @@ namespace XboxFseDirect {
                 System.Console.WriteLine(Usage);
                 return 0;
             }
-            if (args.Length != 1 || (args[0] != "start" && args[0] != "exit" && args[0] != "status" && args[0] != "toggle" && args[0] != "install" && args[0] != "uninstall")) {
+            if (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle" && args[0] != "install" && args[0] != "uninstall")) {
                 System.Console.Error.WriteLine(Usage);
                 return 2;
             }
