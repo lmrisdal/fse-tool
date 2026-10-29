@@ -77,7 +77,7 @@ fse-tool can be the app Xbox mode opens when it starts, in place of the Xbox app
 
 1. Turn on Developer Mode in Settings > System > Advanced. Windows only accepts the home-app capability from unsigned packages in Developer Mode.
 2. Run `fse-tool home install`. This writes a small package to `%LOCALAPPDATA%\fse-tool\home` and registers it for the current user.
-3. Answer `Y` when it asks to set FSE Tool as the home app. Or run `fse-tool home set "FSE Tool"`, or select **FSE Tool** in Settings > Gaming > XBOX mode > **Choose home app**.
+3. Select **FSE Tool** in Settings > Gaming > XBOX mode > **Choose home app**.
 
 To open something other than Steam Big Picture:
 
@@ -95,33 +95,23 @@ The home app writes its last launch to `%LOCALAPPDATA%\fse-tool\home.log`.
 
 Add one application per launcher, with `fse-tool start --app` as the prep command and `fse-tool stop` as the undo command:
 
-| Application | Do command | Undo command |
-| --- | --- | --- |
-| Steam | `fse-tool start --app steam://open/bigpicture` | `fse-tool stop` |
-| Xbox | `fse-tool start --app shell:AppsFolder\Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App` | `fse-tool stop` |
-| Playnite | `fse-tool start --app "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"` | `fse-tool stop` |
+| Application | Do command                                                                                   | Undo command    |
+| ----------- | -------------------------------------------------------------------------------------------- | --------------- |
+| Steam       | `fse-tool start --app steam://open/bigpicture`                                               | `fse-tool stop` |
+| Xbox        | `fse-tool start --app shell:AppsFolder\Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App` | `fse-tool stop` |
+| Playnite    | `fse-tool start --app "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"`                  | `fse-tool stop` |
 
 If fse-tool is the selected home app, Xbox mode opens the requested target in place of the default. Otherwise fse-tool opens the target after Xbox mode is active, on top of whichever home app is selected.
 
-## Manual registry setup
+## Bypass confirmation dialog
 
-If you don't want to use `fse-tool bypass enable`, you can set the registry value in your terminal manually:
-
-```powershell
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults" /v EnterGamingPostureConfirmation_Config /t REG_DWORD /d 2 /f
-```
-
-To remove the bypass manually, equivalent to `fse-tool bypass disable`:
-
-```powershell
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults" /v EnterGamingPostureConfirmation_Config /f
-```
-
-The value is absent by default. In Registry Editor, the same setup is a **DWORD (32-bit) Value** named `EnterGamingPostureConfirmation_Config`, set to `2`, under:
+The bypass is a single registry value for the current user. `fse-tool bypass enable` creates a **DWORD (32-bit) Value** named `EnterGamingPostureConfirmation_Config`, set to `2`, under:
 
 ```text
 HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults
 ```
+
+Windows reads this value as a saved answer to the "Restart for better performance" confirmation dialog, so it skips the dialog when entering Xbox mode. The value is absent by default, and `fse-tool bypass disable` deletes it, which brings the dialog back.
 
 ## Compatibility
 
