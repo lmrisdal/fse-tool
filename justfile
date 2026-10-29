@@ -3,7 +3,7 @@ set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 
 build:
     @New-Item -ItemType Directory -Force -Path ./build | Out-Null
-    @Add-Type -Path ./src/fse-tool.cs -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
+    @Add-Type -Path (Get-ChildItem ./src/*.cs).FullName -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
 
 # Run `just bump 0.2.0-beta.1` for a prerelease or `just bump 0.2.0` for a stable release.
 bump version:

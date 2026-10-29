@@ -61,7 +61,14 @@ function Invoke-FseToolInstaller {
     function Install-FseTool([string]$Scope) {
         $dir = Get-InstallDir $Scope
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        Invoke-WebRequest -Uri $exeUrl -OutFile (Join-Path $dir 'fse-tool.exe') -UseBasicParsing
+        $exe = Join-Path $dir 'fse-tool.exe'
+        Invoke-WebRequest -Uri $exeUrl -OutFile $exe -UseBasicParsing
+
+        # The home app runs a copy of the exe, so refresh it when one is registered.
+        if ((& $exe home status 2>$null) -in 'Installed', 'Selected') {
+            & $exe home install | Out-Null
+            if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not update the fse-tool home app. Run "fse-tool home install" to retry.' }
+        }
 
         $entries = Get-PathEntries $Scope
         if (-not ($entries | Where-Object { Test-SamePath $_ $dir })) {
@@ -71,6 +78,11 @@ function Invoke-FseToolInstaller {
 
     function Uninstall-FseTool([string]$Scope) {
         $dir = Get-InstallDir $Scope
+        $exe = Join-Path $dir 'fse-tool.exe'
+        if ((Test-Path $exe) -and (& $exe home status 2>$null) -in 'Installed', 'Selected') {
+            & $exe home uninstall
+            if ($LASTEXITCODE -ne 0) { Write-Warning 'The fse-tool home app is still registered. Remove it with "Get-AppxPackage fse-tool.Home | Remove-AppxPackage" after choosing another home app.' }
+        }
         if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
 
         $entries = Get-PathEntries $Scope
@@ -170,6 +182,7 @@ function Invoke-FseToolInstaller {
         Write-Host "Installed fse-tool to $dir and added it to the $($s.ToLower()) PATH."
     }
     Write-Host 'Run "fse-tool status" to try it. Terminals that were already open need a restart to see the PATH change.'
+    Write-Host 'To use fse-tool as the XBOX mode home app, turn on Developer Mode and run "fse-tool home install".'
 }
 
 Invoke-FseToolInstaller -Scope $Scope -Uninstall:$Uninstall

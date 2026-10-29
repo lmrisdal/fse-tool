@@ -26,6 +26,7 @@ You can also download `fse-tool.exe` from the [latest release](https://github.co
 
 ```text
 fse-tool start
+fse-tool start --app <target> [args...]
 fse-tool stop
 fse-tool toggle
 fse-tool status
@@ -33,15 +34,57 @@ fse-tool status
 fse-tool bypass enable
 fse-tool bypass disable
 fse-tool bypass status
+
+fse-tool home install
+fse-tool home uninstall
+fse-tool home status
+fse-tool home set <target> [args...]
 ```
 
 - `start` enters Xbox mode; it does nothing if already active.
+- `start --app` enters Xbox mode and opens `<target>` (a URI, `shell:AppsFolder\<AUMID>`, or an exe path). If Xbox mode is already active, it just opens the target. See [Sunshine / Apollo](#sunshine--apollo).
 - `stop` returns to the desktop; it does nothing if already on the desktop.
 - `toggle` switches between Xbox mode and the desktop.
 - `status` prints exactly `Desktop` or `Xbox`.
 - `bypass enable` enables the entry confirmation bypass for the current user.
 - `bypass disable` removes the bypass value and restores default confirmation behavior.
 - `bypass status` prints exactly `Enabled` or `Disabled`.
+- `home install` registers fse-tool as an Xbox mode home app. Run it again after updating fse-tool.
+- `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
+- `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
+- `home set` changes what the home app opens. The default is `steam://open/bigpicture`.
+
+## Home app
+
+fse-tool can be the app Xbox mode opens when it starts, in place of the Xbox app. By default it opens Steam Big Picture.
+
+1. Turn on Developer Mode in Settings > System > Advanced. Windows only accepts the home-app capability from unsigned packages in Developer Mode.
+2. Run `fse-tool home install`. This writes a small package to `%LOCALAPPDATA%\fse-tool\home` and registers it for the current user.
+3. In Settings > Gaming > XBOX mode > **Choose home app**, select **FSE Tool**.
+
+To open something other than Steam Big Picture:
+
+```powershell
+fse-tool home set "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"
+fse-tool home set steam://open/bigpicture
+```
+
+The home app writes its last launch to `%LOCALAPPDATA%\fse-tool\home.log`.
+
+> [!WARNING]
+> Choose a different home app before running `fse-tool home uninstall`. Removing the selected home app can break Task View on some Windows builds.
+
+## Sunshine / Apollo
+
+Add one application per launcher, with `fse-tool start --app` as the prep command and `fse-tool stop` as the undo command:
+
+| Application | Do command | Undo command |
+| --- | --- | --- |
+| Steam | `fse-tool start --app steam://open/bigpicture` | `fse-tool stop` |
+| Xbox | `fse-tool start --app shell:AppsFolder\Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App` | `fse-tool stop` |
+| Playnite | `fse-tool start --app "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"` | `fse-tool stop` |
+
+If fse-tool is the selected home app, Xbox mode opens the requested target in place of the default. Otherwise fse-tool opens the target after Xbox mode is active, on top of whichever home app is selected.
 
 ## Manual registry setup
 
@@ -65,7 +108,7 @@ HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\
 
 ## Compatibility
 
-Verified on Windows 26H2. This tool uses an undocumented internal Windows controller interface, which may change in future Windows updates. The matching source is included as `src/fse-tool.cs`.
+Verified on Windows 26H2. This tool uses an undocumented internal Windows controller interface, which may change in future Windows updates. The matching source is included in `src/`.
 
 ## Building and releasing
 
@@ -77,7 +120,7 @@ just build
 OR
 
 New-Item -ItemType Directory -Force -Path ./build | Out-Null
-Add-Type -Path ./src/fse-tool.cs -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
+Add-Type -Path (Get-ChildItem ./src/*.cs).FullName -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
 ```
 
 To publish a version:
