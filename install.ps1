@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Installs or uninstalls fse-tool and adds it to the user or system PATH.
+    Installs fse-tool and adds it to the user or system PATH.
 
 .EXAMPLE
     irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1 | iex
@@ -9,16 +9,16 @@
     & ([scriptblock]::Create((irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1))) -Scope Machine
 
 .EXAMPLE
-    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1))) -Uninstall
+    irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1 | iex
 #>
 # No validation attributes here: under `irm | iex` these parameters become variables in the
 # caller's scope with no value, and an attribute like ValidateSet would reject that.
-param($Scope, [switch]$Uninstall)
+param($Scope)
 
 # Everything lives in one function so that `irm | iex`, which runs in the caller's scope,
 # doesn't leave helper functions or preference changes behind in the user's session.
 function Invoke-FseToolInstaller {
-    param([string]$Scope, [switch]$Uninstall)
+    param([string]$Scope)
 
     $ErrorActionPreference = 'Stop'
     if ($Scope -and $Scope -notin 'User', 'Machine') {
@@ -28,6 +28,7 @@ function Invoke-FseToolInstaller {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
     $scriptUrl = 'https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1'
+    $uninstallUrl = 'https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1'
     $exeUrl = 'https://github.com/lmrisdal/fse-tool/releases/latest/download/fse-tool.exe'
     $scriptPath = $PSCommandPath
 
@@ -76,20 +77,6 @@ function Invoke-FseToolInstaller {
         }
     }
 
-    function Uninstall-FseTool([string]$Scope) {
-        $dir = Get-InstallDir $Scope
-        $exe = Join-Path $dir 'fse-tool.exe'
-        if ((Test-Path $exe) -and (& $exe home status 2>$null) -in 'Installed', 'Selected') {
-            & $exe home uninstall
-            if ($LASTEXITCODE -ne 0) { Write-Warning 'The fse-tool home app is still registered. Remove it with "Get-AppxPackage fse-tool.Home | Remove-AppxPackage" after choosing another home app.' }
-        }
-        if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
-
-        $entries = Get-PathEntries $Scope
-        $remaining = @($entries | Where-Object { -not (Test-SamePath $_ $dir) })
-        if ($remaining.Count -ne $entries.Count) { Set-PathEntries $Scope $remaining }
-    }
-
     function Test-Administrator {
         $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
         $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -125,41 +112,16 @@ function Invoke-FseToolInstaller {
         }
     }
 
-    function Remove-SessionPath([string]$Dir) {
-        $env:Path = ($env:Path -split ';' | Where-Object { $_ -and -not (Test-SamePath $_ $Dir) }) -join ';'
-    }
-
     $isAdmin = Test-Administrator
     $installed = @(@('User', 'Machine') | Where-Object { Test-Path (Get-InstallDir $_) })
     $scopes = @($Scope | Where-Object { $_ })
 
-    # Running the plain one-liner again offers to update or uninstall the existing install.
-    if (-not $Uninstall -and -not $Scope -and $installed) {
+    # The plain one-liner leaves an existing install alone; pass -Scope to reinstall over it.
+    if (-not $Scope -and $installed) {
         $where = ($installed | ForEach-Object { Get-InstallDir $_ }) -join ' and '
-        $choices = [Management.Automation.Host.ChoiceDescription[]]@(
-            [Management.Automation.Host.ChoiceDescription]::new('&Update', "Download the latest release into $where."),
-            [Management.Automation.Host.ChoiceDescription]::new('U&ninstall', 'Remove fse-tool and its PATH entry.'),
-            [Management.Automation.Host.ChoiceDescription]::new('&Cancel', 'Leave everything as it is.')
-        )
-        switch ($Host.UI.PromptForChoice('fse-tool is already installed', "Found fse-tool in $where. What do you want to do?", $choices, 0)) {
-            0 { $scopes = $installed }
-            1 { $Uninstall = $true }
-            2 { Write-Host 'Nothing changed.'; return }
-        }
-    }
-
-    if ($Uninstall) {
-        if (-not $scopes) { $scopes = $installed }
-        if (-not $scopes) {
-            Write-Host 'fse-tool is not installed.'
-            return
-        }
-        foreach ($s in $scopes) {
-            if ($s -eq 'Machine' -and -not $isAdmin) { Invoke-Elevated '-Scope Machine -Uninstall' }
-            else { Uninstall-FseTool $s }
-            Remove-SessionPath (Get-InstallDir $s)
-            Write-Host "Removed fse-tool from $(Get-InstallDir $s)."
-        }
+        Write-Host "fse-tool is already installed in $where."
+        Write-Host 'Run "fse-tool update" to update it, or uninstall it with:'
+        Write-Host "  irm $uninstallUrl | iex"
         return
     }
 
@@ -185,4 +147,4 @@ function Invoke-FseToolInstaller {
     Write-Host 'To use fse-tool as the XBOX mode home app, turn on Developer Mode and run "fse-tool home install".'
 }
 
-Invoke-FseToolInstaller -Scope $Scope -Uninstall:$Uninstall
+Invoke-FseToolInstaller -Scope $Scope

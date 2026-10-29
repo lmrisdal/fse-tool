@@ -1,0 +1,117 @@
+<#
+.SYNOPSIS
+    Uninstalls fse-tool and removes it from the user or system PATH.
+
+.EXAMPLE
+    irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1 | iex
+
+.EXAMPLE
+    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1))) -Scope Machine
+#>
+# No validation attributes here: under `irm | iex` these parameters become variables in the
+# caller's scope with no value, and an attribute like ValidateSet would reject that.
+param($Scope)
+
+# Everything lives in one function so that `irm | iex`, which runs in the caller's scope,
+# doesn't leave helper functions or preference changes behind in the user's session.
+function Invoke-FseToolUninstaller {
+    param([string]$Scope)
+
+    $ErrorActionPreference = 'Stop'
+    if ($Scope -and $Scope -notin 'User', 'Machine') {
+        throw "Invalid -Scope '$Scope'. Use User or Machine."
+    }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+    $scriptUrl = 'https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1'
+    $scriptPath = $PSCommandPath
+
+    function Get-InstallDir([string]$Scope) {
+        if ($Scope -eq 'Machine') { Join-Path $env:ProgramFiles 'fse-tool' }
+        else { Join-Path $env:LOCALAPPDATA 'Programs\fse-tool' }
+    }
+
+    function Get-EnvironmentKey([string]$Scope) {
+        if ($Scope -eq 'Machine') { 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' }
+        else { 'HKCU:\Environment' }
+    }
+
+    function Test-SamePath([string]$A, [string]$B) {
+        [Environment]::ExpandEnvironmentVariables($A).TrimEnd('\') -ieq [Environment]::ExpandEnvironmentVariables($B).TrimEnd('\')
+    }
+
+    function Get-PathEntries([string]$Scope) {
+        # Read the raw value so entries such as %USERPROFILE%\bin stay unexpanded when written back.
+        $raw = (Get-Item (Get-EnvironmentKey $Scope)).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+        @($raw -split ';' | Where-Object { $_ })
+    }
+
+    function Set-PathEntries([string]$Scope, [string[]]$Entries) {
+        Set-ItemProperty -Path (Get-EnvironmentKey $Scope) -Name Path -Value ($Entries -join ';') -Type ExpandString
+        # A registry write doesn't notify Explorer and other programs; a .NET environment change does.
+        [Environment]::SetEnvironmentVariable('FSE_TOOL_INSTALLER', '1', $Scope)
+        [Environment]::SetEnvironmentVariable('FSE_TOOL_INSTALLER', $null, $Scope)
+    }
+
+    function Uninstall-FseTool([string]$Scope) {
+        $dir = Get-InstallDir $Scope
+        $exe = Join-Path $dir 'fse-tool.exe'
+        if ((Test-Path $exe) -and (& $exe home status 2>$null) -in 'Installed', 'Selected') {
+            & $exe home uninstall
+            if ($LASTEXITCODE -ne 0) { Write-Warning 'The fse-tool home app is still registered. Remove it with "Get-AppxPackage fse-tool.Home | Remove-AppxPackage" after choosing another home app.' }
+        }
+        if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
+
+        $entries = Get-PathEntries $Scope
+        $remaining = @($entries | Where-Object { -not (Test-SamePath $_ $dir) })
+        if ($remaining.Count -ne $entries.Count) { Set-PathEntries $Scope $remaining }
+    }
+
+    function Test-Administrator {
+        $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    }
+
+    # Runs this uninstaller again in an elevated PowerShell. Under `irm | iex` there is no script file
+    # to relaunch, so the elevated process downloads the script again instead.
+    function Invoke-Elevated([string]$Arguments) {
+        $log = Join-Path ([IO.Path]::GetTempPath()) "fse-tool-uninstall-$PID.log"
+        $invoke = if ($scriptPath) { "& '$($scriptPath -replace "'", "''")' $Arguments" }
+                  else { "& ([scriptblock]::Create((Invoke-RestMethod '$scriptUrl'))) $Arguments" }
+        $command = "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; " +
+                   "try { $invoke } catch { Set-Content -LiteralPath '$log' -Value `$_; exit 1 }"
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+
+        Write-Host 'Requesting administrator rights...'
+        try {
+            $process = Start-Process (Get-Process -Id $PID).Path -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
+                -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $encoded
+        } catch {
+            throw 'Administrator rights are required to remove a system-wide install. Run the uninstaller again and accept the prompt.'
+        }
+        if ($process.ExitCode -ne 0) {
+            $message = if (Test-Path $log) { (Get-Content -Raw $log).Trim() } else { "exit code $($process.ExitCode)" }
+            Remove-Item -Force $log -ErrorAction SilentlyContinue
+            throw "The elevated uninstaller failed: $message"
+        }
+    }
+
+    function Remove-SessionPath([string]$Dir) {
+        $env:Path = ($env:Path -split ';' | Where-Object { $_ -and -not (Test-SamePath $_ $Dir) }) -join ';'
+    }
+
+    $isAdmin = Test-Administrator
+    $scopes = if ($Scope) { @($Scope) } else { @(@('User', 'Machine') | Where-Object { Test-Path (Get-InstallDir $_) }) }
+    if (-not $scopes) {
+        Write-Host 'fse-tool is not installed.'
+        return
+    }
+    foreach ($s in $scopes) {
+        if ($s -eq 'Machine' -and -not $isAdmin) { Invoke-Elevated '-Scope Machine' }
+        else { Uninstall-FseTool $s }
+        Remove-SessionPath (Get-InstallDir $s)
+        Write-Host "Removed fse-tool from $(Get-InstallDir $s)."
+    }
+}
+
+Invoke-FseToolUninstaller -Scope $Scope

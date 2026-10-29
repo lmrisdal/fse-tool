@@ -18,7 +18,13 @@ PowerShell:
 irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1 | iex
 ```
 
-Run `fse-tool update` to update to the latest release, or run the same command again to update or uninstall.
+Run `fse-tool update` to update to the latest release.
+
+To uninstall:
+
+```powershell
+irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/uninstall.ps1 | iex
+```
 
 You can also download `fse-tool.exe` from the [latest release](https://github.com/lmrisdal/fse-tool/releases/latest) and place it in a folder of your choice.
 
