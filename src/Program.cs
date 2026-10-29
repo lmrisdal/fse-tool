@@ -26,6 +26,7 @@ Home app:
   home default                   Print what FSE Tool opens when XBOX mode starts.
   home default <target> [args]   Set what FSE Tool opens (default: " + HomeApp.DefaultTarget + @").
 
+  update                         Update fse-tool to the latest release.
   version, --version, -v         Print the fse-tool version.
   help, --help, -h               Show this help.";
 
@@ -52,6 +53,7 @@ Home app:
 
         public static int Main(string[] args) {
             if (HomeApp.IsPackaged()) return HomeApp.RunAsHome(args);
+            Updater.DeleteOldExe();
             if (args.Length == 0 || (args.Length == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h"))) {
                 System.Console.WriteLine("fse-tool " + BuildInfo.Version + Environment.NewLine + Environment.NewLine + Help);
                 return 0;
@@ -65,7 +67,7 @@ Home app:
                 ? args[1] == "install" || args[1] == "uninstall" || args[1] == "status" || args[1] == "set" || args[1] == "default"
                 : args[1] == "set" || args[1] == "default");
             bool isStartWithApp = args.Length >= 3 && args[0] == "start" && args[1] == "--app";
-            if (!isBypass && !isHome && !isStartWithApp && (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle"))) {
+            if (!isBypass && !isHome && !isStartWithApp && (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle" && args[0] != "update"))) {
                 System.Console.Error.WriteLine(Help);
                 return 2;
             }
@@ -80,6 +82,7 @@ Home app:
                 else if (isHome && args.Length == 2) HomeApp.ShowDefault();
                 else if (isHome) HomeApp.SetDefault(args[2], HomeApp.JoinArguments(args, 3));
                 else if (isStartWithApp) StartWithApp(args[2], HomeApp.JoinArguments(args, 3));
+                else if (args[0] == "update") Updater.Update();
                 else if (args[0] == "status") System.Console.WriteLine(Controller.IsActive() ? "Xbox" : "Desktop");
                 else {
                     Bypass.WarnIfDisabled();

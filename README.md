@@ -18,7 +18,7 @@ PowerShell:
 irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1 | iex
 ```
 
-Run the same command again to update or uninstall.
+Run `fse-tool update` to update to the latest release, or run the same command again to update or uninstall.
 
 You can also download `fse-tool.exe` from the [latest release](https://github.com/lmrisdal/fse-tool/releases/latest) and place it in a folder of your choice.
 
@@ -43,6 +43,7 @@ fse-tool home set <name or AUMID>
 fse-tool home default
 fse-tool home default <target> [args...]
 
+fse-tool update
 fse-tool version
 fse-tool help
 ```
@@ -55,11 +56,12 @@ fse-tool help
 - `bypass enable` enables the entry confirmation bypass for the current user.
 - `bypass disable` removes the bypass value and restores default confirmation behavior.
 - `bypass status` prints exactly `Enabled` or `Disabled`.
-- `home install` registers fse-tool as an Xbox mode home app. Run it again after updating fse-tool.
+- `home install` registers fse-tool as an Xbox mode home app. `update` reruns it for you; run it again yourself after updating fse-tool another way.
 - `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
 - `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
 - `home set` lists the home apps Windows offers under **Choose home app** and marks the selected one. `home set <name or AUMID>` selects one, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.
 - `home default` prints what FSE Tool opens when Xbox mode starts. `home default <target>` changes it. The default is `steam://open/bigpicture`.
+- `update` downloads the latest release over the running exe if it is newer, and refreshes the home app if one is installed. A system-wide install in Program Files needs an administrator terminal.
 - `version` (also `--version` and `-v`) prints the version the exe was built from, such as `0.2.0` for a release.
 - `help` (also `--help` and `-h`) lists all commands. Running `fse-tool` with no command does the same.
 
