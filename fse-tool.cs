@@ -69,7 +69,7 @@ namespace XboxFseDirect {
                 // Allow the shell state query to catch up with async completion.
                 while (IsActive() != desired && timer.Elapsed.TotalSeconds < timeoutSeconds) Thread.Sleep(100);
                 if (IsActive() != desired) throw new InvalidOperationException("The request completed, but Windows did not report the requested mode.");
-                return desired ? "Entered XBOX mode (direct controller call; no keys sent)." : "Exited XBOX mode (direct controller call; no keys sent).";
+                return desired ? "Entered XBOX mode." : "Exited XBOX mode.";
             } finally {
                 if (info != IntPtr.Zero) Marshal.Release(info);
                 if (action != IntPtr.Zero) Marshal.Release(action);
