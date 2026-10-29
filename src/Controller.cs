@@ -27,11 +27,16 @@ namespace XboxFseDirect {
             return Marshal.GetDelegateForFunctionPointer(address, typeof(T)) as T;
         }
 
+        // Windows refuses to enter with ERROR_BAD_ENVIRONMENT when no home app is selected.
+        const int ErrorBadEnvironment = unchecked((int)0x8007000A);
+        const string NoHomeAppMessage = "No home app is selected. Select one in Settings > Gaming > XBOX mode > Choose home app.";
+
         public static bool IsActive() { return IsGamingFullScreenExperienceActive() != 0; }
 
         public static string SetActive(bool desired, int timeoutSeconds) {
             if (timeoutSeconds < 1 || timeoutSeconds > 120) throw new ArgumentOutOfRangeException("timeoutSeconds");
             if (IsActive() == desired) return desired ? "XBOX mode is already active." : "Desktop mode is already active.";
+            if (desired && !HomeApp.IsAnySelected()) throw new COMException(NoHomeAppMessage, ErrorBadEnvironment);
             object shell = null;
             IntPtr controller = IntPtr.Zero, action = IntPtr.Zero, info = IntPtr.Zero;
             try {
@@ -70,6 +75,10 @@ namespace XboxFseDirect {
                 while (IsActive() != desired && timer.Elapsed.TotalSeconds < timeoutSeconds) Thread.Sleep(100);
                 if (IsActive() != desired) throw new InvalidOperationException("The request completed, but Windows did not report the requested mode.");
                 return desired ? "Entered XBOX mode." : "Exited XBOX mode.";
+            } catch (COMException error) {
+                // Fallback for when the registry check above misses it.
+                if (desired && error.HResult == ErrorBadEnvironment) throw new COMException(NoHomeAppMessage, error.HResult);
+                throw;
             } finally {
                 if (info != IntPtr.Zero) Marshal.Release(info);
                 if (action != IntPtr.Zero) Marshal.Release(action);

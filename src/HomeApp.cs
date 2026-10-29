@@ -109,12 +109,16 @@ namespace XboxFseDirect {
             return count > 0;
         }
 
-        public static bool IsSelected() {
+        // AUMID of the home app chosen in Settings > Gaming > XBOX mode; empty when none is chosen.
+        static string SelectedAumid() {
             using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(GamingConfigPath)) {
-                string selected = key == null ? null : key.GetValue("GamingHomeApp") as string;
-                return string.Equals(selected, Aumid, StringComparison.OrdinalIgnoreCase);
+                return (key == null ? null : key.GetValue("GamingHomeApp") as string) ?? "";
             }
         }
+
+        public static bool IsSelected() { return string.Equals(SelectedAumid(), Aumid, StringComparison.OrdinalIgnoreCase); }
+
+        public static bool IsAnySelected() { return SelectedAumid().Trim().Length > 0; }
 
         static void RunPowerShell(string command) {
             var info = new ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$ErrorActionPreference = 'Stop'; " + command.Replace("\"", "\\\"") + "\"") {
