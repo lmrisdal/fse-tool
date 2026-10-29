@@ -31,7 +31,7 @@ namespace XboxFseDirect {
 
         public static string SetActive(bool desired, int timeoutSeconds) {
             if (timeoutSeconds < 1 || timeoutSeconds > 120) throw new ArgumentOutOfRangeException("timeoutSeconds");
-            if (IsActive() == desired) return desired ? "Xbox mode is already active." : "Desktop mode is already active.";
+            if (IsActive() == desired) return desired ? "XBOX mode is already active." : "Desktop mode is already active.";
             object shell = null;
             IntPtr controller = IntPtr.Zero, action = IntPtr.Zero, info = IntPtr.Zero;
             try {
@@ -69,7 +69,7 @@ namespace XboxFseDirect {
                 // Allow the shell state query to catch up with async completion.
                 while (IsActive() != desired && timer.Elapsed.TotalSeconds < timeoutSeconds) Thread.Sleep(100);
                 if (IsActive() != desired) throw new InvalidOperationException("The request completed, but Windows did not report the requested mode.");
-                return desired ? "Entered Xbox mode (direct controller call; no keys sent)." : "Exited Xbox mode (direct controller call; no keys sent).";
+                return desired ? "Entered XBOX mode (direct controller call; no keys sent)." : "Exited XBOX mode (direct controller call; no keys sent).";
             } finally {
                 if (info != IntPtr.Zero) Marshal.Release(info);
                 if (action != IntPtr.Zero) Marshal.Release(action);
@@ -84,29 +84,29 @@ namespace XboxFseDirect {
     public static class Program {
         const string RegistryPath = @"Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults";
         const string RegistryValue = "EnterGamingPostureConfirmation_Config";
-        const string Usage = "Usage: fse-tool start | stop | status | toggle | install | uninstall";
+        const string Usage = "Usage: fse-tool start | stop | status | toggle | bypass enable | bypass disable | bypass status";
 
         static bool IsDialogBypassEnabled(Microsoft.Win32.RegistryKey key) {
             object value = key == null ? null : key.GetValue(RegistryValue);
             return value is int && (int)value == 2 && key.GetValueKind(RegistryValue) == Microsoft.Win32.RegistryValueKind.DWord;
         }
 
-        static void ConfigureDialogBypass(bool install) {
-            using (var key = install
+        static void ConfigureDialogBypass(bool enable) {
+            using (var key = enable
                 ? Microsoft.Win32.Registry.CurrentUser.CreateSubKey(RegistryPath)
                 : Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RegistryPath, true)) {
-                if (install) {
-                    if (key == null) throw new InvalidOperationException("Could not open the Xbox mode confirmation settings.");
+                if (enable) {
+                    if (key == null) throw new InvalidOperationException("Could not open the XBOX mode confirmation settings.");
                     key.SetValue(RegistryValue, 2, Microsoft.Win32.RegistryValueKind.DWord);
-                    if (!IsDialogBypassEnabled(key)) throw new InvalidOperationException("Could not verify the installed confirmation bypass.");
-                    System.Console.WriteLine("Installed: Xbox mode entry confirmation bypass enabled.");
+                    if (!IsDialogBypassEnabled(key)) throw new InvalidOperationException("Could not verify the enabled confirmation bypass.");
+                    System.Console.WriteLine("Enabled: XBOX mode entry confirmation bypass enabled.");
                 } else {
                     if (key != null) {
                         key.DeleteValue(RegistryValue, false);
                         if (Array.IndexOf(key.GetValueNames(), RegistryValue) >= 0)
                             throw new InvalidOperationException("Could not verify removal of the confirmation bypass.");
                     }
-                    System.Console.WriteLine("Uninstalled: Xbox mode entry confirmation bypass removed.");
+                    System.Console.WriteLine("Disabled: XBOX mode entry confirmation bypass removed.");
                 }
             }
         }
@@ -116,11 +116,11 @@ namespace XboxFseDirect {
                 using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RegistryPath)) {
                     if (IsDialogBypassEnabled(key)) return;
                 }
-                System.Console.Error.WriteLine("Notice: EnterGamingPostureConfirmation_Config is not set to DWORD 2. Run 'fse-tool install' to skip the Xbox mode confirmation dialog.");
+                System.Console.Error.WriteLine("Warning: XBOX mode confirmation dialog bypass is not enabled. Run 'fse-tool bypass enable' to skip this dialog.");
             } catch (System.Security.SecurityException) {
-                System.Console.Error.WriteLine("Notice: Could not read the Xbox mode confirmation setting. Run 'fse-tool install' if a confirmation dialog appears.");
+                System.Console.Error.WriteLine("Warning: Could not read the XBOX mode confirmation setting. Run 'fse-tool bypass enable' if a confirmation dialog appears.");
             } catch (System.UnauthorizedAccessException) {
-                System.Console.Error.WriteLine("Notice: Could not read the Xbox mode confirmation setting. Run 'fse-tool install' if a confirmation dialog appears.");
+                System.Console.Error.WriteLine("Warning: Could not read the XBOX mode confirmation setting. Run 'fse-tool bypass enable' if a confirmation dialog appears.");
             }
         }
 
@@ -129,12 +129,17 @@ namespace XboxFseDirect {
                 System.Console.WriteLine(Usage);
                 return 0;
             }
-            if (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle" && args[0] != "install" && args[0] != "uninstall")) {
+            bool isBypass = args.Length == 2 && args[0] == "bypass" && (args[1] == "enable" || args[1] == "disable" || args[1] == "status");
+            if (!isBypass && (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle"))) {
                 System.Console.Error.WriteLine(Usage);
                 return 2;
             }
             try {
-                if (args[0] == "install" || args[0] == "uninstall") ConfigureDialogBypass(args[0] == "install");
+                if (isBypass && args[1] == "status") {
+                    using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RegistryPath))
+                        System.Console.WriteLine(IsDialogBypassEnabled(key) ? "Enabled" : "Disabled");
+                }
+                else if (isBypass) ConfigureDialogBypass(args[1] == "enable");
                 else if (args[0] == "status") System.Console.WriteLine(Controller.IsActive() ? "Xbox" : "Desktop");
                 else {
                     WarnIfDialogBypassIsDisabled();
@@ -142,7 +147,9 @@ namespace XboxFseDirect {
                 }
                 return 0;
             } catch (System.Exception error) {
-                System.Console.Error.WriteLine("fse-tool: " + error.Message + " (0x" + error.HResult.ToString("X8") + ")");
+                // COM errors from twinui append internal debug lines; keep only the first.
+                string message = error.Message.Split(new[] { '\r', '\n' }, 2)[0].Trim();
+                System.Console.Error.WriteLine("fse-tool: " + message + " (0x" + error.HResult.ToString("X8") + ")");
                 return 1;
             }
         }

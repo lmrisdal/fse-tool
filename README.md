@@ -22,26 +22,28 @@ fse-tool stop
 fse-tool toggle
 fse-tool status
 
-fse-tool install
-fse-tool uninstall
+fse-tool bypass enable
+fse-tool bypass disable
+fse-tool bypass status
 ```
 
 - `start` enters Xbox mode; it does nothing if already active.
 - `stop` returns to the desktop; it does nothing if already on the desktop.
 - `toggle` switches between Xbox mode and the desktop.
 - `status` prints exactly `Desktop` or `Xbox`.
-- `install` enables the entry confirmation bypass for the current user.
-- `uninstall` removes the bypass value and restores default confirmation behavior.
+- `bypass enable` enables the entry confirmation bypass for the current user.
+- `bypass disable` removes the bypass value and restores default confirmation behavior.
+- `bypass status` prints exactly `Enabled` or `Disabled`.
 
 ## Manual registry setup
 
-If you don't want to use `fse-tool install`, you can set the registry value in your terminal manually:
+If you don't want to use `fse-tool bypass enable`, you can set the registry value in your terminal manually:
 
 ```powershell
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults" /v EnterGamingPostureConfirmation_Config /t REG_DWORD /d 2 /f
 ```
 
-To remove the bypass manually, equivalent to `fse-tool uninstall`:
+To remove the bypass manually, equivalent to `fse-tool bypass disable`:
 
 ```powershell
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\SystemDialogResults" /v EnterGamingPostureConfirmation_Config /f
