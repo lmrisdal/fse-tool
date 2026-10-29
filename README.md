@@ -39,6 +39,8 @@ fse-tool home install
 fse-tool home uninstall
 fse-tool home status
 fse-tool home set <target> [args...]
+
+fse-tool help
 ```
 
 - `start` enters Xbox mode; it does nothing if already active.
@@ -53,6 +55,7 @@ fse-tool home set <target> [args...]
 - `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
 - `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
 - `home set` changes what the home app opens. The default is `steam://open/bigpicture`.
+- `help` (also `--help` and `-h`) lists all commands. Running `fse-tool` with no command does the same.
 
 ## Home app
 

@@ -2,7 +2,27 @@ using System;
 
 namespace XboxFseDirect {
     public static class Program {
-        const string Usage = "Usage: fse-tool start [--app <target> [args...]] | stop | status | toggle | bypass enable | bypass disable | bypass status | home install | home uninstall | home status | home set <target> [args...]";
+        const string Help = @"Usage: fse-tool <command>
+
+XBOX mode:
+  start                          Enter XBOX mode.
+  start --app <target> [args]    Enter XBOX mode and open <target>: a URI, shell:AppsFolder\<AUMID>, or an exe path. The home app must be FSE Tool (see 'home install') for this to work.
+  stop                           Return to the desktop.
+  toggle                         Switch between XBOX mode and the desktop.
+  status                         Print Xbox or Desktop.
+
+Confirmation dialog bypass:
+  bypass enable                  Skip the ""Restart for better performance"" dialog.
+  bypass disable                 Restore the dialog.
+  bypass status                  Print Enabled or Disabled.
+
+Home app:
+  home install                   Register fse-tool as an XBOX mode home app (requires Developer Mode).
+  home uninstall                 Remove the home app. Choose another home app first.
+  home status                    Print NotInstalled, Installed, or Selected.
+  home set <target> [args]       Set what the home app opens (default: " + HomeApp.DefaultTarget + @").
+
+  help, --help, -h               Show this help.";
 
         static void StartWithApp(string target, string arguments) {
             Bypass.WarnIfDisabled();
@@ -27,8 +47,8 @@ namespace XboxFseDirect {
 
         public static int Main(string[] args) {
             if (HomeApp.IsPackaged()) return HomeApp.RunAsHome(args);
-            if (args.Length == 0 || (args.Length == 1 && (args[0] == "--help" || args[0] == "-h"))) {
-                System.Console.WriteLine(Usage);
+            if (args.Length == 0 || (args.Length == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h"))) {
+                System.Console.WriteLine(Help);
                 return 0;
             }
             bool isBypass = args.Length == 2 && args[0] == "bypass" && (args[1] == "enable" || args[1] == "disable" || args[1] == "status");
@@ -37,7 +57,7 @@ namespace XboxFseDirect {
                 : args[1] == "set");
             bool isStartWithApp = args.Length >= 3 && args[0] == "start" && args[1] == "--app";
             if (!isBypass && !isHome && !isStartWithApp && (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle"))) {
-                System.Console.Error.WriteLine(Usage);
+                System.Console.Error.WriteLine(Help);
                 return 2;
             }
             try {
