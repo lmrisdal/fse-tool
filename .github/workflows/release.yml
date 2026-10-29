@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - name: Build
         shell: powershell
-        run: Add-Type -Path ./fse-tool.cs -OutputAssembly ./fse-tool.exe -OutputType ConsoleApplication
+        run: Add-Type -Path ./src/fse-tool.cs -OutputAssembly ./fse-tool.exe -OutputType ConsoleApplication
       - name: Publish
         shell: pwsh
         env:

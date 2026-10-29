@@ -65,7 +65,7 @@ HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GamingConfiguration\
 
 ## Compatibility
 
-Verified on Windows 26H2. This tool uses an undocumented internal Windows controller interface, which may change in future Windows updates. The matching source is included as fse-tool.cs.
+Verified on Windows 26H2. This tool uses an undocumented internal Windows controller interface, which may change in future Windows updates. The matching source is included as `src/fse-tool.cs`.
 
 ## Building and releasing
 
@@ -76,7 +76,8 @@ just build
 
 OR
 
-@Add-Type -Path ./fse-tool.cs -OutputAssembly ./fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
+New-Item -ItemType Directory -Force -Path ./build | Out-Null
+Add-Type -Path ./src/fse-tool.cs -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
 ```
 
 To publish a version:
