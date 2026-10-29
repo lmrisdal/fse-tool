@@ -62,6 +62,63 @@ namespace XboxFseDirect {
             }
         }
 
+        static bool CanWrite(string directory) {
+            try {
+                using (System.IO.File.Create(System.IO.Path.Combine(directory, System.IO.Path.GetRandomFileName()), 1, System.IO.FileOptions.DeleteOnClose)) { }
+                return true;
+            } catch (UnauthorizedAccessException) {
+                return false;
+            }
+        }
+
+        static bool IsAdministrator() {
+            using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
+                return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+
+        // Runs 'update --elevated' through UAC. The elevated copy has no console of ours, so it writes its
+        // output to a file that is printed here.
+        static void ReplaceElevated(string tag) {
+            string log = System.IO.Path.GetTempFileName();
+            try {
+                var info = new ProcessStartInfo(ExePath, "update --elevated \"" + tag + "\" \"" + log + "\"") {
+                    UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden
+                };
+                int exitCode;
+                try {
+                    using (var process = Process.Start(info)) {
+                        process.WaitForExit();
+                        exitCode = process.ExitCode;
+                    }
+                } catch (System.ComponentModel.Win32Exception error) {
+                    // 1223 is ERROR_CANCELLED: the UAC prompt was declined.
+                    if (error.NativeErrorCode == 1223)
+                        throw new InvalidOperationException("Update cancelled. Writing to " + System.IO.Path.GetDirectoryName(ExePath) + " needs administrator rights.");
+                    throw;
+                }
+                string output = System.IO.File.ReadAllText(log).Trim();
+                if (exitCode != 0) throw new InvalidOperationException(output.Length > 0 ? output : "The elevated update exited with code " + exitCode + ".");
+                if (output.Length > 0) System.Console.WriteLine(output);
+            } finally {
+                try { System.IO.File.Delete(log); } catch (Exception) { }
+            }
+        }
+
+        // Entry point for the elevated copy started by ReplaceElevated.
+        public static int RunElevated(string tag, string log) {
+            using (var writer = new System.IO.StreamWriter(log, false) { AutoFlush = true }) {
+                System.Console.SetOut(writer);
+                try {
+                    ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+                    Replace(tag);
+                    return 0;
+                } catch (Exception error) {
+                    writer.WriteLine(error.Message.Split(new[] { '\r', '\n' }, 2)[0].Trim());
+                    return 1;
+                }
+            }
+        }
+
         public static void Update() {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             string current = BuildInfo.Version;
@@ -71,6 +128,24 @@ namespace XboxFseDirect {
                 return;
             }
 
+            // A Program Files install needs administrator rights to swap the exe. Only that step is
+            // elevated: the home app is registered per user, so it is refreshed from this process.
+            if (!CanWrite(System.IO.Path.GetDirectoryName(ExePath)) && !IsAdministrator()) ReplaceElevated(tag);
+            else Replace(tag);
+
+            // The home app runs its own copy of the exe, so refresh it from the new one.
+            if (HomeApp.IsInstalled()) {
+                try {
+                    RunExe(ExePath, "home install");
+                    System.Console.WriteLine("Updated: fse-tool home app refreshed.");
+                } catch (Exception error) {
+                    System.Console.Error.WriteLine("Warning: Could not update the fse-tool home app (" + error.Message.Split(new[] { '\r', '\n' }, 2)[0].Trim() + "). Run 'fse-tool home install' to retry.");
+                }
+            }
+        }
+
+        static void Replace(string tag) {
+            string current = BuildInfo.Version;
             string exe = ExePath;
             string downloaded = exe + ".new", old = exe + ".old";
             System.Console.WriteLine("Downloading fse-tool " + tag.TrimStart('v') + "...");
@@ -110,16 +185,6 @@ namespace XboxFseDirect {
                 throw;
             }
             System.Console.WriteLine("Updated: fse-tool " + current + " -> " + version + ".");
-
-            // The home app runs its own copy of the exe, so refresh it from the new one.
-            if (HomeApp.IsInstalled()) {
-                try {
-                    RunExe(exe, "home install");
-                    System.Console.WriteLine("Updated: fse-tool home app refreshed.");
-                } catch (Exception error) {
-                    System.Console.Error.WriteLine("Warning: Could not update the fse-tool home app (" + error.Message.Split(new[] { '\r', '\n' }, 2)[0].Trim() + "). Run 'fse-tool home install' to retry.");
-                }
-            }
         }
     }
 }

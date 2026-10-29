@@ -32,41 +32,41 @@ You can also download `fse-tool.exe` from the [latest release](https://github.co
 
 ### General
 
-| Command    | Description                                                                                                                                                 |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `help`     | Lists all commands. Also `--help`, `-h`, or no command at all.                                                                                              |
-| `update`   | Downloads the latest release over the running exe if it is newer, and refreshes the home app if one is installed. A Program Files install needs an administrator terminal. |
-| `version`  | Prints the version the exe was built from, such as `0.2.0`. Also `--version` and `-v`.                                                                      |
+| Command   | Description                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------------- |
+| `help`    | Lists all commands. Also `--help`, `-h`, or no command at all.                                                    |
+| `update`  | Downloads the latest release over the running exe if it is newer, and refreshes the home app if one is installed. |
+| `version` | Prints the version the exe was built from, such as `0.2.0`. Also `--version` and `-v`.                            |
 
 ### Xbox mode
 
-| Command                           | Description                                                                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `start`                           | Enters Xbox mode. Does nothing if already active.                                                                                                                        |
-| `start --app <target> [args...]`  | Enters Xbox mode and opens `<target>`: a URI, `shell:AppsFolder\<AUMID>`, or an exe path. If Xbox mode is already active, it just opens the target. See [Sunshine / Apollo](#sunshine--apollo). |
-| `stop`                            | Returns to the desktop. Does nothing if already on the desktop.                                                                                                          |
-| `toggle`                          | Switches between Xbox mode and the desktop.                                                                                                                              |
-| `status`                          | Prints `Desktop` or `Xbox`.                                                                                                                                              |
+| Command                          | Description                                                                                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`                          | Enters Xbox mode. Does nothing if already active.                                                                                                                                               |
+| `start --app <target> [args...]` | Enters Xbox mode and opens `<target>`: a URI, `shell:AppsFolder\<AUMID>`, or an exe path. If Xbox mode is already active, it just opens the target. See [Sunshine / Apollo](#sunshine--apollo). |
+| `stop`                           | Returns to the desktop. Does nothing if already on the desktop.                                                                                                                                 |
+| `toggle`                         | Switches between Xbox mode and the desktop.                                                                                                                                                     |
+| `status`                         | Prints `Desktop` or `Xbox`.                                                                                                                                                                     |
 
 ### Confirmation bypass
 
-| Command          | Description                                                                 |
-| ---------------- | --------------------------------------------------------------------------- |
-| `bypass enable`  | Skips the "Restart for better performance" dialog for the current user.     |
-| `bypass disable` | Removes the bypass and restores the dialog.                                 |
-| `bypass status`  | Prints `Enabled` or `Disabled`.                                             |
+| Command          | Description                                                             |
+| ---------------- | ----------------------------------------------------------------------- |
+| `bypass enable`  | Skips the "Restart for better performance" dialog for the current user. |
+| `bypass disable` | Removes the bypass and restores the dialog.                             |
+| `bypass status`  | Prints `Enabled` or `Disabled`.                                         |
 
 ### Home app
 
-| Command                           | Description                                                                                                                                  |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home install`                    | Registers fse-tool as an Xbox mode home app. `update` reruns it for you; run it again yourself after updating fse-tool another way.           |
-| `home uninstall`                  | Removes the home app. Refuses while fse-tool is the selected home app.                                                                       |
-| `home status`                     | Prints `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).                                                    |
-| `home set`                        | Lists the home apps under **Choose home app** and marks the selected one.                                                                    |
-| `home set <name or AUMID>`        | Selects a home app, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.                                                   |
-| `home default`                    | Prints what fse-tool opens when Xbox mode starts. The default is `steam://open/bigpicture`.                                                   |
-| `home default <target> [args...]` | Changes what fse-tool opens when Xbox mode starts.                                                                                           |
+| Command                           | Description                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `home install`                    | Registers fse-tool as an Xbox mode home app. `update` reruns it for you; run it again yourself after updating fse-tool another way. |
+| `home uninstall`                  | Removes the home app. Refuses while fse-tool is the selected home app.                                                              |
+| `home status`                     | Prints `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).                                           |
+| `home set`                        | Lists the home apps under **Choose home app** and marks the selected one.                                                           |
+| `home set <name or AUMID>`        | Selects a home app, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.                                         |
+| `home default`                    | Prints what fse-tool opens when Xbox mode starts. The default is `steam://open/bigpicture`.                                         |
+| `home default <target> [args...]` | Changes what fse-tool opens when Xbox mode starts.                                                                                  |
 
 ## Home app
 

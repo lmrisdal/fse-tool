@@ -54,6 +54,8 @@ Home app:
         public static int Main(string[] args) {
             if (HomeApp.IsPackaged()) return HomeApp.RunAsHome(args);
             Updater.DeleteOldExe();
+            // Internal: the elevated half of 'update' for installs in Program Files.
+            if (args.Length == 4 && args[0] == "update" && args[1] == "--elevated") return Updater.RunElevated(args[2], args[3]);
             if (args.Length == 0 || (args.Length == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h"))) {
                 System.Console.WriteLine("fse-tool " + BuildInfo.Version + Environment.NewLine + Environment.NewLine + Help);
                 return 0;
