@@ -30,46 +30,43 @@ You can also download `fse-tool.exe` from the [latest release](https://github.co
 
 ## Commands
 
-```text
-fse-tool start
-fse-tool start --app <target> [args...]
-fse-tool stop
-fse-tool toggle
-fse-tool status
+### General
 
-fse-tool bypass enable
-fse-tool bypass disable
-fse-tool bypass status
+| Command    | Description                                                                                                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `help`     | Lists all commands. Also `--help`, `-h`, or no command at all.                                                                                              |
+| `update`   | Downloads the latest release over the running exe if it is newer, and refreshes the home app if one is installed. A Program Files install needs an administrator terminal. |
+| `version`  | Prints the version the exe was built from, such as `0.2.0`. Also `--version` and `-v`.                                                                      |
 
-fse-tool home install
-fse-tool home uninstall
-fse-tool home status
-fse-tool home set
-fse-tool home set <name or AUMID>
-fse-tool home default
-fse-tool home default <target> [args...]
+### Xbox mode
 
-fse-tool update
-fse-tool version
-fse-tool help
-```
+| Command                           | Description                                                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `start`                           | Enters Xbox mode. Does nothing if already active.                                                                                                                        |
+| `start --app <target> [args...]`  | Enters Xbox mode and opens `<target>`: a URI, `shell:AppsFolder\<AUMID>`, or an exe path. If Xbox mode is already active, it just opens the target. See [Sunshine / Apollo](#sunshine--apollo). |
+| `stop`                            | Returns to the desktop. Does nothing if already on the desktop.                                                                                                          |
+| `toggle`                          | Switches between Xbox mode and the desktop.                                                                                                                              |
+| `status`                          | Prints `Desktop` or `Xbox`.                                                                                                                                              |
 
-- `start` enters Xbox mode; it does nothing if already active.
-- `start --app` enters Xbox mode and opens `<target>` (a URI, `shell:AppsFolder\<AUMID>`, or an exe path). If Xbox mode is already active, it just opens the target. See [Sunshine / Apollo](#sunshine--apollo).
-- `stop` returns to the desktop; it does nothing if already on the desktop.
-- `toggle` switches between Xbox mode and the desktop.
-- `status` prints exactly `Desktop` or `Xbox`.
-- `bypass enable` enables the entry confirmation bypass for the current user.
-- `bypass disable` removes the bypass value and restores default confirmation behavior.
-- `bypass status` prints exactly `Enabled` or `Disabled`.
-- `home install` registers fse-tool as an Xbox mode home app. `update` reruns it for you; run it again yourself after updating fse-tool another way.
-- `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
-- `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
-- `home set` lists the home apps Windows offers under **Choose home app** and marks the selected one. `home set <name or AUMID>` selects one, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.
-- `home default` prints what FSE Tool opens when Xbox mode starts. `home default <target>` changes it. The default is `steam://open/bigpicture`.
-- `update` downloads the latest release over the running exe if it is newer, and refreshes the home app if one is installed. A system-wide install in Program Files needs an administrator terminal.
-- `version` (also `--version` and `-v`) prints the version the exe was built from, such as `0.2.0` for a release.
-- `help` (also `--help` and `-h`) lists all commands. Running `fse-tool` with no command does the same.
+### Confirmation bypass
+
+| Command          | Description                                                                 |
+| ---------------- | --------------------------------------------------------------------------- |
+| `bypass enable`  | Skips the "Restart for better performance" dialog for the current user.     |
+| `bypass disable` | Removes the bypass and restores the dialog.                                 |
+| `bypass status`  | Prints `Enabled` or `Disabled`.                                             |
+
+### Home app
+
+| Command                           | Description                                                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home install`                    | Registers fse-tool as an Xbox mode home app. `update` reruns it for you; run it again yourself after updating fse-tool another way.           |
+| `home uninstall`                  | Removes the home app. Refuses while fse-tool is the selected home app.                                                                       |
+| `home status`                     | Prints `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).                                                    |
+| `home set`                        | Lists the home apps under **Choose home app** and marks the selected one.                                                                    |
+| `home set <name or AUMID>`        | Selects a home app, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.                                                   |
+| `home default`                    | Prints what fse-tool opens when Xbox mode starts. The default is `steam://open/bigpicture`.                                                   |
+| `home default <target> [args...]` | Changes what fse-tool opens when Xbox mode starts.                                                                                           |
 
 ## Home app
 
