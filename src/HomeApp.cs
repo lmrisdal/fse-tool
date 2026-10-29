@@ -120,16 +120,87 @@ namespace XboxFseDirect {
 
         public static bool IsAnySelected() { return SelectedAumid().Trim().Length > 0; }
 
-        static void RunPowerShell(string command) {
-            var info = new ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$ErrorActionPreference = 'Stop'; " + command.Replace("\"", "\\\"") + "\"") {
-                UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true
+        static string RunPowerShell(string command) {
+            var info = new ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$ErrorActionPreference = 'Stop'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; " + command.Replace("\"", "\\\"") + "\"") {
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8
             };
             using (var process = Process.Start(info)) {
-                process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd().Trim();
+                // Read stderr on another thread so a full stdout pipe can't deadlock the child.
+                var error = process.StandardError.ReadToEndAsync();
+                string output = process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
-                if (process.ExitCode != 0) throw new InvalidOperationException(error.Length > 0 ? error : "PowerShell exited with code " + process.ExitCode + ".");
+                if (process.ExitCode != 0) throw new InvalidOperationException(error.Result.Trim().Length > 0 ? error.Result.Trim() : "PowerShell exited with code " + process.ExitCode + ".");
+                return output;
             }
+        }
+
+        // Apps that declare the windows.gamingApp extension, which is what Settings offers under
+        // Choose home app. Names come from the Start menu, like the Settings list.
+        const string ListHomeAppsScript = @"$names = @{}; Get-StartApps | ForEach-Object { $names[$_.AppID] = $_.Name };
+foreach ($p in Get-AppxPackage) {
+  if (-not $p.InstallLocation) { continue }
+  $path = Join-Path $p.InstallLocation 'AppxManifest.xml'
+  if (-not (Test-Path -LiteralPath $path) -or -not (Select-String -LiteralPath $path -Pattern 'windows.gamingApp' -SimpleMatch -Quiet)) { continue }
+  [xml]$manifest = Get-Content -Raw -LiteralPath $path
+  foreach ($app in $manifest.Package.Applications.Application) {
+    if ($app.OuterXml -match 'Name=.windows\.gamingApp.') { $id = $p.PackageFamilyName + '!' + $app.Id; $id + [char]9 + $names[$id] }
+  }
+}";
+
+        static System.Collections.Generic.List<string[]> ListHomeApps() {
+            var apps = new System.Collections.Generic.List<string[]>();
+            foreach (string line in RunPowerShell(ListHomeAppsScript).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)) {
+                string[] parts = line.Split('\t');
+                string aumid = parts[0].Trim();
+                string name = parts.Length > 1 && parts[1].Trim().Length > 0 ? parts[1].Trim() : aumid;
+                apps.Add(new[] { name, aumid });
+            }
+            return apps;
+        }
+
+        static void PrintHomeApps(System.Collections.Generic.List<string[]> apps) {
+            string selected = SelectedAumid();
+            int width = "None".Length;
+            foreach (string[] app in apps) width = Math.Max(width, app[0].Length);
+            System.Console.WriteLine("Home apps (* = selected):");
+            System.Console.WriteLine((selected.Trim().Length == 0 ? "* " : "  ") + "None");
+            foreach (string[] app in apps)
+                System.Console.WriteLine((string.Equals(app[1], selected, StringComparison.OrdinalIgnoreCase) ? "* " : "  ") + app[0].PadRight(width) + "  " + app[1]);
+        }
+
+        // Writes the same value Settings > Gaming > XBOX mode > Choose home app does; null clears it (None).
+        static void WriteSelectedAumid(string aumid) {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(GamingConfigPath)) {
+                if (key == null) throw new InvalidOperationException("Could not open the XBOX mode settings.");
+                if (aumid == null) key.DeleteValue("GamingHomeApp", false);
+                else key.SetValue("GamingHomeApp", aumid, Microsoft.Win32.RegistryValueKind.String);
+            }
+            if (!string.Equals(SelectedAumid(), aumid ?? "", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Could not verify the home app selection.");
+        }
+
+        // 'home set' without a value lists the choices; with one, selects it by name or AUMID.
+        public static void SetSelected(string value) {
+            var apps = ListHomeApps();
+            if (value == null) {
+                PrintHomeApps(apps);
+                return;
+            }
+            if (string.Equals(value, "None", StringComparison.OrdinalIgnoreCase)) {
+                WriteSelectedAumid(null);
+                System.Console.WriteLine("Selected: no home app.");
+                return;
+            }
+            foreach (string[] app in apps) {
+                if (string.Equals(value, app[0], StringComparison.OrdinalIgnoreCase) || string.Equals(value, app[1], StringComparison.OrdinalIgnoreCase)) {
+                    WriteSelectedAumid(app[1]);
+                    System.Console.WriteLine("Selected: " + app[0] + " is now the XBOX mode home app.");
+                    return;
+                }
+            }
+            PrintHomeApps(apps);
+            throw new InvalidOperationException("No home app named '" + value + "'. Use a name or AUMID from the list above.");
         }
 
         static string PowerShellQuote(string value) { return "'" + value.Replace("'", "''") + "'"; }
@@ -161,14 +232,27 @@ namespace XboxFseDirect {
             WriteGuiCopy(System.IO.Path.Combine(layout, "fse-tool.exe"));
             RunPowerShell("Add-AppxPackage -Register " + PowerShellQuote(System.IO.Path.Combine(layout, "AppxManifest.xml")) + " -ForceUpdateFromAnyVersion -ForceApplicationShutdown");
             if (!IsInstalled()) throw new InvalidOperationException("Windows did not report the registered home app package.");
-            System.Console.WriteLine(IsSelected()
-                ? "Installed: fse-tool home app updated."
-                : "Installed: select 'FSE Tool' in Settings > Gaming > XBOX mode > Choose home app.");
+            if (IsSelected()) {
+                System.Console.WriteLine("Installed: fse-tool home app updated.");
+                return;
+            }
+            System.Console.WriteLine("Installed: fse-tool home app registered.");
+            // Only ask when someone can answer; scripts such as install.ps1 redirect output.
+            if (!System.Console.IsInputRedirected && !System.Console.IsOutputRedirected) {
+                System.Console.Write("Set FSE Tool as the XBOX mode home app now? [Y/n] ");
+                string answer = (System.Console.ReadLine() ?? "n").Trim();
+                if (answer.Length == 0 || answer.StartsWith("y", StringComparison.OrdinalIgnoreCase)) {
+                    WriteSelectedAumid(Aumid);
+                    System.Console.WriteLine("Selected: FSE Tool is now the XBOX mode home app.");
+                    return;
+                }
+            }
+            System.Console.WriteLine("Run 'fse-tool home set \"FSE Tool\"' or choose it in Settings > Gaming > XBOX mode > Choose home app to use it.");
         }
 
         public static void Uninstall() {
             if (IsSelected())
-                throw new InvalidOperationException("FSE Tool is the selected home app. Choose another one in Settings > Gaming > XBOX mode first; removing it while selected can break Task View.");
+                throw new InvalidOperationException("FSE Tool is the selected home app. Choose another one first (for example 'fse-tool home set XBOX'); removing it while selected can break Task View.");
             if (IsInstalled()) RunPowerShell("Get-AppxPackage -Name " + PowerShellQuote(PackageName) + " | Remove-AppxPackage");
             if (System.IO.Directory.Exists(LayoutDirectory)) System.IO.Directory.Delete(LayoutDirectory, true);
             System.Console.WriteLine("Uninstalled: fse-tool home app removed.");
@@ -204,6 +288,15 @@ namespace XboxFseDirect {
                 key.SetValue("HomeArguments", arguments);
             }
             System.Console.WriteLine("Home target: " + (arguments.Length > 0 ? target + " " + arguments : target));
+        }
+
+        public static void ShowDefault() {
+            string target = DefaultTarget, arguments = "";
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(SettingsPath)) {
+                string home = key == null ? null : key.GetValue("HomeTarget") as string;
+                if (!string.IsNullOrEmpty(home)) { target = home; arguments = key.GetValue("HomeArguments") as string ?? ""; }
+            }
+            System.Console.WriteLine(arguments.Length > 0 ? target + " " + arguments : target);
         }
 
         public static void SetPending(string target, string arguments) {

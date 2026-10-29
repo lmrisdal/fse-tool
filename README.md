@@ -38,7 +38,10 @@ fse-tool bypass status
 fse-tool home install
 fse-tool home uninstall
 fse-tool home status
-fse-tool home set <target> [args...]
+fse-tool home set
+fse-tool home set <name or AUMID>
+fse-tool home default
+fse-tool home default <target> [args...]
 
 fse-tool version
 fse-tool help
@@ -55,7 +58,8 @@ fse-tool help
 - `home install` registers fse-tool as an Xbox mode home app. Run it again after updating fse-tool.
 - `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
 - `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
-- `home set` changes what the home app opens. The default is `steam://open/bigpicture`.
+- `home set` lists the home apps Windows offers under **Choose home app** and marks the selected one. `home set <name or AUMID>` selects one, for example `home set XBOX`, `home set "FSE Tool"`, or `home set None`.
+- `home default` prints what FSE Tool opens when Xbox mode starts. `home default <target>` changes it. The default is `steam://open/bigpicture`.
 - `version` (also `--version` and `-v`) prints the version the exe was built from, such as `0.2.0` for a release.
 - `help` (also `--help` and `-h`) lists all commands. Running `fse-tool` with no command does the same.
 
@@ -65,13 +69,13 @@ fse-tool can be the app Xbox mode opens when it starts, in place of the Xbox app
 
 1. Turn on Developer Mode in Settings > System > Advanced. Windows only accepts the home-app capability from unsigned packages in Developer Mode.
 2. Run `fse-tool home install`. This writes a small package to `%LOCALAPPDATA%\fse-tool\home` and registers it for the current user.
-3. In Settings > Gaming > XBOX mode > **Choose home app**, select **FSE Tool**.
+3. Answer `Y` when it asks to set FSE Tool as the home app. Or run `fse-tool home set "FSE Tool"`, or select **FSE Tool** in Settings > Gaming > XBOX mode > **Choose home app**.
 
 To open something other than Steam Big Picture:
 
 ```powershell
-fse-tool home set "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"
-fse-tool home set steam://open/bigpicture
+fse-tool home default "%LOCALAPPDATA%\Playnite\Playnite.FullscreenApp.exe"
+fse-tool home default steam://open/bigpicture
 ```
 
 The home app writes its last launch to `%LOCALAPPDATA%\fse-tool\home.log`.

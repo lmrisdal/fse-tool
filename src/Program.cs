@@ -6,7 +6,8 @@ namespace XboxFseDirect {
 
 XBOX mode:
   start                          Enter XBOX mode.
-  start --app <target> [args]    Enter XBOX mode and open <target>: a URI, shell:AppsFolder\<AUMID>, or an exe path. The home app must be FSE Tool (see 'home install') for this to work.
+  start --app <target> [args]    Enter XBOX mode and open <target>: a URI, shell:AppsFolder\<AUMID>, or an exe path. 
+                                 The home app must be set to FSE Tool (see 'home install').
   stop                           Return to the desktop.
   toggle                         Switch between XBOX mode and the desktop.
   status                         Print Xbox or Desktop.
@@ -20,7 +21,10 @@ Home app:
   home install                   Register fse-tool as an XBOX mode home app (requires Developer Mode).
   home uninstall                 Remove the home app. Choose another home app first.
   home status                    Print NotInstalled, Installed, or Selected.
-  home set <target> [args]       Set what the home app opens (default: " + HomeApp.DefaultTarget + @").
+  home set                       List the home apps Windows offers, marking the selected one.
+  home set <name or AUMID>       Change the XBOX mode home app, e.g. 'home set ""FSE Tool""' or 'home set None'.
+  home default                   Print what FSE Tool opens when XBOX mode starts.
+  home default <target> [args]   Set what FSE Tool opens (default: " + HomeApp.DefaultTarget + @").
 
   version, --version, -v         Print the fse-tool version.
   help, --help, -h               Show this help.";
@@ -58,8 +62,8 @@ Home app:
             }
             bool isBypass = args.Length == 2 && args[0] == "bypass" && (args[1] == "enable" || args[1] == "disable" || args[1] == "status");
             bool isHome = args.Length >= 2 && args[0] == "home" && (args.Length == 2
-                ? args[1] == "install" || args[1] == "uninstall" || args[1] == "status"
-                : args[1] == "set");
+                ? args[1] == "install" || args[1] == "uninstall" || args[1] == "status" || args[1] == "set" || args[1] == "default"
+                : args[1] == "set" || args[1] == "default");
             bool isStartWithApp = args.Length >= 3 && args[0] == "start" && args[1] == "--app";
             if (!isBypass && !isHome && !isStartWithApp && (args.Length != 1 || (args[0] != "start" && args[0] != "stop" && args[0] != "status" && args[0] != "toggle"))) {
                 System.Console.Error.WriteLine(Help);
@@ -71,6 +75,9 @@ Home app:
                 else if (isHome && args[1] == "install") HomeApp.Install();
                 else if (isHome && args[1] == "uninstall") HomeApp.Uninstall();
                 else if (isHome && args[1] == "status") System.Console.WriteLine(HomeApp.Status());
+                // Names may contain spaces, so 'home set FSE Tool' works unquoted too.
+                else if (isHome && args[1] == "set") HomeApp.SetSelected(args.Length > 2 ? string.Join(" ", args, 2, args.Length - 2) : null);
+                else if (isHome && args.Length == 2) HomeApp.ShowDefault();
                 else if (isHome) HomeApp.SetDefault(args[2], HomeApp.JoinArguments(args, 3));
                 else if (isStartWithApp) StartWithApp(args[2], HomeApp.JoinArguments(args, 3));
                 else if (args[0] == "status") System.Console.WriteLine(Controller.IsActive() ? "Xbox" : "Desktop");
