@@ -118,9 +118,26 @@ function Invoke-FseToolInstaller {
     }
 
     $isAdmin = Test-Administrator
+    $installed = @(@('User', 'Machine') | Where-Object { Test-Path (Get-InstallDir $_) })
+    $scopes = @($Scope | Where-Object { $_ })
+
+    # Running the plain one-liner again offers to update or uninstall the existing install.
+    if (-not $Uninstall -and -not $Scope -and $installed) {
+        $where = ($installed | ForEach-Object { Get-InstallDir $_ }) -join ' and '
+        $choices = [Management.Automation.Host.ChoiceDescription[]]@(
+            [Management.Automation.Host.ChoiceDescription]::new('&Update', "Download the latest release into $where."),
+            [Management.Automation.Host.ChoiceDescription]::new('U&ninstall', 'Remove fse-tool and its PATH entry.'),
+            [Management.Automation.Host.ChoiceDescription]::new('&Cancel', 'Leave everything as it is.')
+        )
+        switch ($Host.UI.PromptForChoice('fse-tool is already installed', "Found fse-tool in $where. What do you want to do?", $choices, 0)) {
+            0 { $scopes = $installed }
+            1 { $Uninstall = $true }
+            2 { Write-Host 'Nothing changed.'; return }
+        }
+    }
 
     if ($Uninstall) {
-        $scopes = if ($Scope) { @($Scope) } else { @('User', 'Machine') | Where-Object { Test-Path (Get-InstallDir $_) } }
+        if (-not $scopes) { $scopes = $installed }
         if (-not $scopes) {
             Write-Host 'fse-tool is not installed.'
             return
@@ -134,22 +151,24 @@ function Invoke-FseToolInstaller {
         return
     }
 
-    if (-not $Scope) {
+    if (-not $scopes) {
         $choices = [Management.Automation.Host.ChoiceDescription[]]@(
             [Management.Automation.Host.ChoiceDescription]::new('&User', "Install for the current user in $(Get-InstallDir User)."),
             [Management.Automation.Host.ChoiceDescription]::new('&System', "Install for all users in $(Get-InstallDir Machine). Requires administrator rights.")
         )
         $answer = $Host.UI.PromptForChoice('Install fse-tool', 'Add fse-tool to the user PATH or the system PATH?', $choices, 0)
-        $Scope = @('User', 'Machine')[$answer]
+        $scopes = @(@('User', 'Machine')[$answer])
     }
 
     Write-Host 'Downloading the latest fse-tool.exe...'
-    if ($Scope -eq 'Machine' -and -not $isAdmin) { Invoke-Elevated '-Scope Machine' }
-    else { Install-FseTool $Scope }
+    foreach ($s in $scopes) {
+        if ($s -eq 'Machine' -and -not $isAdmin) { Invoke-Elevated '-Scope Machine' }
+        else { Install-FseTool $s }
 
-    $dir = Get-InstallDir $Scope
-    Add-SessionPath $dir
-    Write-Host "Installed fse-tool to $dir and added it to the $($Scope.ToLower()) PATH."
+        $dir = Get-InstallDir $s
+        Add-SessionPath $dir
+        Write-Host "Installed fse-tool to $dir and added it to the $($s.ToLower()) PATH."
+    }
     Write-Host 'Run "fse-tool status" to try it. Terminals that were already open need a restart to see the PATH change.'
 }
 
