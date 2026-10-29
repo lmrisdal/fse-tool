@@ -12,7 +12,13 @@ Use tools like [XboxFullScreenExperienceTool](https://github.com/8bit2qubit/Xbox
 
 ## Installation
 
-Download the latest release from the repository and place `fse-tool.exe` in a folder of your choice. Optionally, add the folder to your system PATH to run `fse-tool` from any location.
+PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/lmrisdal/fse-tool/main/install.ps1 | iex
+```
+
+You can also download `fse-tool.exe` from the [latest release](https://github.com/lmrisdal/fse-tool/releases/latest) and place it in a folder of your choice.
 
 ## Commands
 
