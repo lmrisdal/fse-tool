@@ -40,6 +40,7 @@ fse-tool home uninstall
 fse-tool home status
 fse-tool home set <target> [args...]
 
+fse-tool version
 fse-tool help
 ```
 
@@ -55,6 +56,7 @@ fse-tool help
 - `home uninstall` removes the home app. It refuses while fse-tool is the selected home app.
 - `home status` prints exactly `NotInstalled`, `Installed`, or `Selected` (installed and chosen as the home app).
 - `home set` changes what the home app opens. The default is `steam://open/bigpicture`.
+- `version` (also `--version` and `-v`) prints the version the exe was built from, such as `0.2.0` for a release.
 - `help` (also `--help` and `-h`) lists all commands. Running `fse-tool` with no command does the same.
 
 ## Home app
@@ -115,16 +117,18 @@ Verified on Windows 26H2. This tool uses an undocumented internal Windows contro
 
 ## Building and releasing
 
-Run `just build` to compile the exe.
+Run `just build` (or `./build.ps1`) to compile `build/fse-tool.exe`. The version comes from `git describe`, such as `0.1.1-6-gd8449d1-dirty` for an untagged build. Release builds use the pushed tag.
 
 ```powershell
 just build
 
 OR
 
-New-Item -ItemType Directory -Force -Path ./build | Out-Null
-Add-Type -Path (Get-ChildItem ./src/*.cs).FullName -OutputAssembly ./build/fse-tool.exe -OutputType ConsoleApplication -ErrorAction Stop
+./build.ps1
+./build.ps1 -Version v0.2.0 -Output ./fse-tool.exe
 ```
+
+Compiling `src/*.cs` directly with `Add-Type` also works, but `fse-tool version` then reports `dev`.
 
 To publish a version:
 

@@ -22,6 +22,7 @@ Home app:
   home status                    Print NotInstalled, Installed, or Selected.
   home set <target> [args]       Set what the home app opens (default: " + HomeApp.DefaultTarget + @").
 
+  version, --version, -v         Print the fse-tool version.
   help, --help, -h               Show this help.";
 
         static void StartWithApp(string target, string arguments) {
@@ -48,7 +49,11 @@ Home app:
         public static int Main(string[] args) {
             if (HomeApp.IsPackaged()) return HomeApp.RunAsHome(args);
             if (args.Length == 0 || (args.Length == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h"))) {
-                System.Console.WriteLine(Help);
+                System.Console.WriteLine("fse-tool " + BuildInfo.Version + Environment.NewLine + Environment.NewLine + Help);
+                return 0;
+            }
+            if (args.Length == 1 && (args[0] == "version" || args[0] == "--version" || args[0] == "-v")) {
+                System.Console.WriteLine(BuildInfo.Version);
                 return 0;
             }
             bool isBypass = args.Length == 2 && args[0] == "bypass" && (args[1] == "enable" || args[1] == "disable" || args[1] == "status");
